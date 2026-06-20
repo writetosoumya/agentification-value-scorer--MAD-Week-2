@@ -209,7 +209,7 @@ This is not a one-off project — it's a building block in a larger platform.
 
 ---
 ## Submission Links
-- **GitHub:** 
+- **GitHub:** https://github.com/soumyavj/agentification-value-scorer-MAD-Week-2 
 - **Video demo:**  
 - **Eval report JSON:** Run `python main.py --eval` to regenerate. 
   Results summary is in this document above.
