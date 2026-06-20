@@ -1,12 +1,12 @@
 # Agentification Value Scorer
 ### ARM™ × AVRE™ Intelligence Engine — RAG-Powered Governance Assessment
 
-**Week 2 Project | The Gen Academy Mastering Agentic AI Bootcamp**  
-**Author:** Agni Sivaraman | Enterprise AI Governance, Cognizant PS&E
+**Week 2 Project | The Gen Academy Mastering Agentic AI Certification**  
+**Author:** Soumya V Jom | Enterprise AI Strategy & Governance, Cognizant PS&E
 
 ---
 
-## What This Is
+## Objective
 
 The **Agentification Value Scorer** is a RAG-powered governance intelligence tool that scores any enterprise business use case for AI agent readiness across two proprietary frameworks:
 
@@ -25,7 +25,7 @@ The system uses **Retrieval-Augmented Generation (RAG)** to ground all scoring i
 
 ## RAG One-Liner
 
-> My RAG app helps **enterprise AI governance practitioners and business leaders** answer **"should we agentify this use case, and at what risk?"** from **governance frameworks, regulatory documents, and use case reference patterns** in a **CLI interface** with **≥75% faithfulness** and **≤10 second response latency**.
+> My RAG app helps **enterprise AI governance practitioners and business leaders** answer **"should we agentify this use case, and at what risk?"** from **governance frameworks, regulatory documents, and use case reference patterns** in a **Streamlit web interface** with **≥75% faithfulness** and **≤10 second response latency**.
 
 ---
 
@@ -34,9 +34,10 @@ The system uses **Retrieval-Augmented Generation (RAG)** to ground all scoring i
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                  AGENTIFICATION VALUE SCORER             │
+│              Streamlit Web UI + CLI Interface            │
 │                                                          │
 │  ┌─────────────┐    ┌──────────────────────────────┐    │
-│  │  User Input │    │       ChromaDB Vector Store   │    │
+│  │  User Input │    │    TF-IDF Vector Store        │    │
 │  │  (use case  │    │  ┌──────────────────────────┐ │    │
 │  │  name +     │    │  │ ARM™ framework chunks    │ │    │
 │  │  description│    │  │ AVRE™ framework chunks   │ │    │
@@ -44,14 +45,15 @@ The system uses **Retrieval-Augmented Generation (RAG)** to ground all scoring i
 │         │           │  │ NIST AI RMF functions    │ │    │
 │         ▼           │  │ Use case reference lib   │ │    │
 │  ┌──────────────┐   │  └──────────────────────────┘ │    │
-│  │ RAG Retrieval│◄──┤   Embedding: all-MiniLM-L6-v2 │    │
+│  │ RAG Retrieval│◄──┤   Embedding: TF-IDF + bigrams  │    │
 │  │ (MMR, k=5)  │   │   Retrieval: MMR (diversity)   │    │
 │  └──────┬───────┘   └──────────────────────────────┘    │
 │         │                                                │
 │         ▼                                                │
 │  ┌──────────────────────────────────────────────────┐   │
-│  │            LLM SCORING AGENT (Claude Sonnet)      │   │
-│  │  System: ARM™ + AVRE™ scoring rubrics             │   │
+│  │         LLM SCORING AGENT (Llama 3.3 70B)        │   │
+│  │         Served via Nebius Token Factory           │   │
+│  │  System: ARM™ + AVRE™ scoring rubrics            │   │
 │  │  Input:  Use case + retrieved governance context  │   │
 │  │  Output: Structured JSON scores + rationale       │   │
 │  └──────┬───────────────────────────────────────────┘   │
@@ -62,7 +64,7 @@ The system uses **Retrieval-Augmented Generation (RAG)** to ground all scoring i
 │  │  ARM™ Composite Score → Risk Tier                │   │
 │  │  AVRE™ Benefit Realization                       │   │
 │  │  NEV = BR - (CDR × ARM™ Multiplier)             │   │
-│  │  Rich terminal output + JSON export               │   │
+│  │  Streamlit UI + JSON export                      │   │
 │  └──────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -74,11 +76,12 @@ The system uses **Retrieval-Augmented Generation (RAG)** to ground all scoring i
 | Layer | Technology |
 |-------|-----------|
 | RAG Framework | LangChain |
-| Vector Store | ChromaDB (local persistent) |
-| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (local, no API key) |
-| Retrieval Strategy | MMR (Maximal Marginal Relevance), k=5 |
+| Vector Store | Custom TF-IDF (scikit-learn, pickle-serialized) |
+| Embeddings | TF-IDF + bigrams, 8,000 features, sublinear TF scaling (local, no API key) |
+| Retrieval Strategy | MMR (Maximal Marginal Relevance), k=5, fetch_k=20, λ=0.6 |
 | Chunking | Recursive character splitter, 800 tokens, 120 overlap |
-| LLM Scoring | Anthropic Claude Sonnet via API |
+| LLM Scoring | Llama 3.3 70B via Nebius Token Factory (OpenAI-compatible API) |
+| Web UI | Streamlit |
 | Terminal UI | Rich |
 | Evaluation | Custom 15-question faithfulness suite |
 
@@ -88,16 +91,29 @@ The system uses **Retrieval-Augmented Generation (RAG)** to ground all scoring i
 
 ```bash
 git clone <repo>
-cd agentic-value-scorer
+cd agentification-value-scorer
 pip install -r requirements.txt
 ```
 
-No `.env` needed for RAG — embeddings run locally. The Anthropic API key is provided via the runtime environment.
+Set your Nebius API key:
+```bash
+export NEBIUS_API_KEY="your-nebius-secret-key"
+```
 
 ---
 
 ## Usage
 
+### Web UI (recommended)
+```bash
+streamlit run app.py
+```
+Opens at `http://localhost:8501` with three pages:
+- **Score a Use Case** — interactive scoring with 6 presets
+- **Evaluation Report** — 15-question RAG faithfulness results
+- **About** — project overview
+
+### CLI
 ```bash
 # Interactive scoring mode
 python main.py
@@ -116,40 +132,45 @@ python main.py --rebuild
 
 ## RAG Design Decisions
 
+### Why TF-IDF over Dense Embeddings
+For a governance corpus with precise technical terminology (ARM™, AVRE™, EU AI Act Article references, NIST AI RMF function names), TF-IDF with bigrams is a strong choice:
+- Exact term matching on regulatory language ("Annex III", "SR 11-7", "DPIA") is high-precision
+- Bigrams capture multi-word governance concepts ("autonomy risk", "benefit realization", "capability debt")
+- Runs fully locally — no API calls, no latency, no data exfiltration risk
+
 ### Chunking Strategy
 **Recursive character splitter** at 800 tokens with 120-token overlap. Chosen because:
-- Framework documents have variable structure (tables, numbered lists, prose) requiring adaptive splitting
-- 800 tokens balances semantic completeness per chunk against retrieval precision
-- 120-token overlap ensures scoring rubrics (e.g., "Score 6-8: High risk...") don't get split mid-context
-
-### Embedding Model
-**all-MiniLM-L6-v2** — fast, high-quality, 384-dim, runs fully locally. No API calls for embedding = no latency, no cost, no data exfiltration risk. Appropriate for a governance intelligence tool handling sensitive enterprise use case descriptions.
+- Framework documents have variable structure requiring adaptive splitting
+- 800 tokens keeps ARM™ scoring rubrics intact (score ranges span multiple tiers)
+- 120-token overlap ensures concepts spanning chunk boundaries are captured
 
 ### Retrieval Strategy
-**MMR (Maximal Marginal Relevance)** with k=5, fetch_k=20, λ=0.6. Chosen over pure dense similarity to ensure retrieved chunks span multiple framework documents (ARM™ + AVRE™ + regulatory) rather than returning 5 near-duplicate chunks from the same section.
+**MMR (Maximal Marginal Relevance)** with k=5, fetch_k=20, λ=0.6. Ensures retrieved chunks span multiple framework documents (ARM™ + AVRE™ + regulatory) rather than returning near-duplicate chunks from the same section.
 
 ### "I Don't Know" Path
-When retrieval does not surface relevant context (e.g., out-of-corpus questions about specific fine amounts), the LLM is prompted to flag uncertainty rather than hallucinate. The faithfulness evaluation tests this explicitly (Q14).
+When retrieval does not surface relevant context, the LLM is prompted to flag uncertainty rather than hallucinate. The faithfulness evaluation tests this explicitly (Q14 — out-of-corpus question).
 
 ---
 
 ## Evaluation Results
 
-15-question evaluation suite testing retrieval faithfulness, source accuracy, edge cases, and multi-hop reasoning. See `outputs/eval_report.json` for full results.
+15-question evaluation suite testing retrieval faithfulness, source accuracy, edge cases, and multi-hop reasoning.
 
 | Metric | Result |
 |--------|--------|
-| Avg faithfulness (14 scoreable) | See eval output |
-| Source retrieval accuracy | See eval output |
+| Avg faithfulness (14 scoreable) | **81.2%** |
+| Source retrieval accuracy | **100%** |
+| Questions passing ≥50% faithfulness | **13/14** |
+| Only failure | Q11 — GPAI synthetic data edge case (40%) |
 | Chunking strategy | Recursive, 800 tokens, 120 overlap |
-| Embedding model | all-MiniLM-L6-v2 |
-| Retrieval | MMR, k=5 |
+| Embedding | TF-IDF + bigrams, 8,000 features |
+| Retrieval | MMR, k=5, fetch_k=20 |
 
 ---
 
 ## Frameworks (Proprietary IP)
 
-ARM™ and AVRE™ are original frameworks developed by Agni Sivaraman. They are not Cognizant IP. Use under attribution.
+ARM™ and AVRE™ are original frameworks developed by Soumya V Jom. They are not Cognizant IP. Use under attribution.
 
 ---
 
@@ -157,6 +178,7 @@ ARM™ and AVRE™ are original frameworks developed by Agni Sivaraman. They are
 
 This project serves as the **RAG backbone** for the Week 3 agentic system: an **AI Governance Intelligence Agent** with:
 - `score_use_case` tool (this RAG pipeline)
-- `compliance_check` tool (regulatory lookup)
-- `generate_governance_brief` tool (output formatter)
+- `compliance_check` tool (regulatory lookup by industry + jurisdiction)
+- `web_search` tool (real-time regulatory news retrieval)
+- `generate_governance_brief` tool (structured report output)
 - Orchestrated via LangGraph state machine with HITL gate before final report delivery
