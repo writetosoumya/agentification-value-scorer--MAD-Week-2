@@ -1,9 +1,9 @@
 # Week 2 Project: Agentification Value Scorer
 ## RAG-Powered Governance Intelligence | The Gen Academy Mastering Agentic AI Bootcamp
 
-**Author:** Agni Sivaraman  
+**Author:** Soumya V Jom  
 **Date:** June 2026  
-**Submission track:** Code-heavy — LangChain + custom TF-IDF vectorstore
+**Submission track:** Code-heavy — LangChain + custom TF-IDF vectorstore + Streamlit UI
 
 ---
 
@@ -11,9 +11,11 @@
 
 The **Agentification Value Scorer** is a RAG-powered governance intelligence tool that scores any enterprise business use case for AI agent readiness. Instead of building a generic Q&A bot or document retrieval system, I built a tool that directly extends my original proprietary frameworks: **ARM™ (Agentification Risk Model)** and **AVRE™ (Agentic Value Realization Engine)**.
 
+The tool features a full **Streamlit web interface** with color-coded risk cards, animated score bars, and a Net Enterprise Value verdict — making governance assessments visual and accessible to non-technical stakeholders.
+
 ### The one-liner
 
-> My RAG app helps **enterprise AI governance practitioners and business leaders** answer **"should we agentify this use case, and at what risk?"** from **governance frameworks, regulatory documents, and use case reference patterns** in a **CLI and web interface** with **≥75% faithfulness** and **≤10 second response latency.**
+> My RAG app helps **enterprise AI governance practitioners and business leaders** answer **"should we agentify this use case, and at what risk?"** from **governance frameworks, regulatory documents, and use case reference patterns** in a **Streamlit web interface** with **≥75% faithfulness** and **≤10 second response latency.**
 
 ---
 
@@ -33,7 +35,7 @@ I deliberately chose NOT to use a generic HR policy bot or financial document re
 
 | Field | Decision |
 |-------|----------|
-| **Use case** | Answers "what ARM™ risk score and AVRE™ Net Enterprise Value does this use case produce?" for enterprise AI governance practitioners, via CLI and web interface |
+| **Use case** | Answers "what ARM™ risk score and AVRE™ Net Enterprise Value does this use case produce?" for enterprise AI governance practitioners, via Streamlit web UI and CLI |
 | **Corpus** | 4 documents: ARM™ framework (original IP), AVRE™ framework (original IP), EU AI Act + NIST AI RMF + ISO 42001 (summarized governance reference), enterprise use case reference library |
 | **Ingestion + cleaning** | Plain text files, UTF-8 encoded. No markup to strip. Corpus authored specifically for this RAG system to ensure terminological consistency. |
 | **Ingestion + freshness** | Static for this version. Future: scheduled pull from regulatory update feeds. Corpus re-embedded when any source document changes. |
@@ -42,9 +44,9 @@ I deliberately chose NOT to use a generic HR policy bot or financial document re
 
 ---
 
-## Build Track: LangChain + Custom Vectorstore
+## Build Track: LangChain + Custom Vectorstore + Streamlit
 
-**Why not ChromaDB?** The deployment environment blocked HuggingFace model downloads and required a self-contained solution. Rather than using a lighter pre-built embedding, I implemented a TF-IDF vectorstore from scratch using scikit-learn's TfidfVectorizer with MMR-style diversity selection. This gave me full control over retrieval behavior and required zero external API calls for the embedding layer.
+**Why not ChromaDB?** Initially planned to use ChromaDB with `all-MiniLM-L6-v2`. Hit a hard blocker: HuggingFace model downloads were unavailable in the build environment. Pivoted to a custom TF-IDF vectorstore built from scratch using scikit-learn's TfidfVectorizer with MMR-style diversity selection. This gave full control over retrieval behavior with zero external API calls for the embedding layer.
 
 **Why TF-IDF over dense embeddings for this corpus?**
 
@@ -53,7 +55,22 @@ For a governance corpus with precise technical terminology (ARM™, AVRE™, EU 
 - Bigrams capture multi-word governance concepts ("autonomy risk", "benefit realization", "capability debt")
 - No hallucination risk from semantic approximation — if the term isn't in the corpus, it doesn't match
 
-For Week 3, I plan to upgrade to a hybrid dense+sparse retrieval approach using a local embedding model.
+**Why Streamlit for the UI?**
+
+The handout bonus criteria mentioned a chatbot UI. Rather than building a generic chat interface, I built a purpose-designed governance scoring UI with:
+- 6 preset use case buttons for quick demos
+- Color-coded ARM™ risk dimension cards (green → red)
+- Animated score bars for each dimension
+- A large NET ENTERPRISE VALUE verdict with color-coded background
+- Expandable rationale per dimension
+- RAG source tags showing which documents were retrieved
+
+**Why Llama 3.3 70B on Nebius?**
+
+The course requires at least one Nebius Token Factory model call. Llama 3.3 70B was selected because:
+- Excellent at returning clean structured JSON — critical for the scoring pipeline
+- Fast inference on Nebius infrastructure
+- OpenAI-compatible API format — minimal code change from the original design
 
 ---
 
@@ -63,16 +80,24 @@ For Week 3, I plan to upgrade to a hybrid dense+sparse retrieval approach using 
 User Input (use case name + description)
           │
           ▼
+  Streamlit Web UI (app.py)
+  ┌────────────────────────────────────────┐
+  │ • 6 preset use case buttons           │
+  │ • Custom name + description input     │
+  │ • Score button triggers pipeline      │
+  └────────────────────────────────────────┘
+          │
+          ▼
   RAG Retrieval Layer
   ┌────────────────────────────────────────┐
   │ TF-IDF Vectorstore (sklearn)           │
   │ • 59 chunks across 4 documents        │
-  │ • MMR retrieval, k=5                  │
-  │ • Cross-document diversity enforced   │
+  │ • MMR retrieval, k=5, fetch_k=20     │
+  │ • λ=0.6 (60% relevance, 40% diversity)│
   └────────────────────────────────────────┘
-          │ 5 relevant chunks
+          │ 5 diverse chunks
           ▼
-  LLM Scoring Agent (Claude Sonnet via Anthropic API)
+  LLM Scoring Agent (Llama 3.3 70B via Nebius)
   ┌────────────────────────────────────────┐
   │ System prompt: ARM™ + AVRE™ rubrics   │
   │ Input: use case + retrieved context   │
@@ -84,7 +109,7 @@ User Input (use case name + description)
   ┌────────────────────────────────────────┐
   │ ARM™ composite = weighted average     │
   │ AVRE™ NEV = BR − (CDR × multiplier)  │
-  │ Rich terminal output + JSON export    │
+  │ Streamlit visual output + JSON export │
   └────────────────────────────────────────┘
 ```
 
@@ -114,6 +139,11 @@ Return only valid JSON. Scores must be numeric (float), 0-10.
 Higher ARM™ = higher risk. Higher AVRE™ = higher value.
 ```
 
+**AI coding tools used:**
+- Claude (claude.ai) was used extensively for code generation, debugging, architecture decisions, and iteration guidance throughout the build
+- Every component was built interactively — code was generated, tested, errors were diagnosed, and fixes were applied in real time
+- Key debugging sessions: ChromaDB → TF-IDF pivot, Anthropic → Nebius API switch, permissions fix on requirements.txt, OpenAI library integration
+
 **Corpus authoring prompts used:**
 - "Write a comprehensive ARM™ risk dimension scoring guide for [dimension] with specific examples at score ranges 1-2, 3-5, 6-8, and 9-10"
 - "Generate a realistic use case reference entry for [use case] following the established ARM™/AVRE™ format with specific regulatory citations"
@@ -124,18 +154,24 @@ Higher ARM™ = higher risk. Higher AVRE™ = higher value.
 ## Iterations and Learnings
 
 **Iteration 1: ChromaDB + HuggingFace embeddings**
-Initially planned to use ChromaDB with `all-MiniLM-L6-v2` — a standard, high-quality embedding model. Hit a hard blocker: HuggingFace model downloads are blocked in the deployment environment (403 Forbidden). This forced a pivot.
+Initially planned to use ChromaDB with `all-MiniLM-L6-v2`. Hit a hard blocker: HuggingFace model downloads were unavailable. Forced a pivot to a custom solution.
 
 **Iteration 2: TF-IDF vectorstore**
-Rebuilt the vectorstore using sklearn's TfidfVectorizer. Key insight: for a governance corpus with precise technical terminology and specific regulatory language, TF-IDF with bigrams performs surprisingly well. The 81.2% faithfulness score on 14 scoreable evaluation questions validates this.
+Rebuilt the vectorstore using sklearn's TfidfVectorizer. Key insight: for a governance corpus with precise technical terminology, TF-IDF with bigrams performs surprisingly well. The 81.2% faithfulness score validates this.
 
 **Iteration 3: MMR retrieval over pure cosine similarity**
-First pass used greedy top-k retrieval. All 5 retrieved chunks clustered around the ARM™ risk dimension section, missing AVRE™ and regulatory context. Switched to MMR (Maximal Marginal Relevance) which penalizes retrieving chunks too similar to already-selected ones. Cross-document diversity improved significantly — all 15 evaluation questions retrieved chunks from at least 2 different source documents.
+First pass used greedy top-k retrieval — all 5 chunks clustered around the ARM™ section, missing AVRE™ and regulatory context. Switched to MMR which penalizes near-duplicate chunk selection. Cross-document diversity improved significantly.
 
 **Iteration 4: Chunk size tuning**
-Started at 512 tokens. Found that ARM™ scoring rubrics (which have scoring guides spanning multiple tiers) got split mid-criteria, creating chunks that had the high-risk guidance but not the mitigation requirements. Increased to 800 tokens with 120-token overlap — this keeps scoring rubrics intact while maintaining retrieval precision.
+Started at 512 tokens. ARM™ scoring rubrics got split mid-criteria. Increased to 800 tokens with 120-token overlap — keeps rubrics intact while maintaining retrieval precision.
 
-**Key failure (Q11):** The question about synthetic training data and GPAI model compliance only retrieved 40% of expected concepts. Root cause: this topic sits at the intersection of the GPAI model section (governance_frameworks.txt) and the EU AI Act prohibited practices section — two chunks in the same document but far apart. MMR correctly avoided over-sampling the same document, but the specific technical concepts (copyright compliance, training data documentation for GPAI models) were in a third chunk that didn't make the top-5. Fix for v2: increase k to 7 for edge case query patterns.
+**Iteration 5: Anthropic → Nebius API**
+Originally built for Anthropic API. Pivoted to Nebius Token Factory (course requirement) using OpenAI-compatible format. Switched to Llama 3.3 70B — minimal code change, same JSON output structure.
+
+**Iteration 6: CLI → Streamlit UI**
+Added Streamlit as a bonus deliverable. Designed a dark-theme enterprise UI with color-coded risk cards, animated score bars, and a prominent NEV verdict panel. Three pages: scoring, evaluation report, about.
+
+**Key failure (Q11):** GPAI synthetic data question retrieved only 40% of expected concepts. Root cause: topic spans two distant chunks in the same document — MMR correctly avoided over-sampling but missed the second relevant chunk. Fix for v2: increase k to 7 for edge case patterns.
 
 ---
 
@@ -152,7 +188,8 @@ Started at 512 tokens. Found that ARM™ scoring rubrics (which have scoring gui
 
 **Retrieval strategy:** MMR, k=5, fetch_k=20, λ=0.6  
 **Chunk strategy:** Recursive, 800 tokens, 120 overlap  
-**Embedding:** TF-IDF + bigrams, 8,000 features, sublinear TF
+**Embedding:** TF-IDF + bigrams, 8,000 features, sublinear TF  
+**LLM:** Llama 3.3 70B via Nebius Token Factory
 
 ---
 
@@ -163,15 +200,16 @@ This project is explicitly designed as the RAG backbone for Week 3:
 **Week 3 Agent: AI Governance Intelligence Agent**
 - `score_use_case` tool → calls this RAG pipeline
 - `compliance_check` tool → regulatory lookup for applicable laws by jurisdiction + industry
-- `generate_governance_brief` tool → structured output in ARM™/AVRE™ report format
+- `web_search` tool → real-time regulatory news retrieval
+- `generate_governance_brief` tool → structured report output
 - Orchestrated via LangGraph state machine
 - HITL gate before final report delivery: human reviews risk tier before it's logged
 
 This is not a one-off project — it's a building block in a larger platform.
 
 ---
-
 ## Submission Links
-- **GitHub:** [link]
-- **Video demo:** [link]
-- **Eval report JSON:** See `/outputs/eval_report.json` in repo
+- **GitHub:** 
+- **Video demo:**  
+- **Eval report JSON:** Run `python main.py --eval` to regenerate. 
+  Results summary is in this document above.
