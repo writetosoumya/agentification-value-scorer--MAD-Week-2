@@ -1,0 +1,74 @@
+AGENTIFICATION RISK MODEL (ARM™) — FRAMEWORK REFERENCE DOCUMENT
+Version 2.0 | Agni Sivaraman | Enterprise AI Governance
+
+OVERVIEW
+ARM™ (Agentification Risk Model) is a structured scoring framework for evaluating the risk posture of deploying AI agents in enterprise contexts. It assesses five risk dimensions that directly influence whether a business use case is safe, viable, and valuable to agentify.
+
+ARM™ RISK DIMENSIONS
+
+1. AUTONOMY RISK (AR)
+Definition: The degree to which the agent takes irreversible, consequential actions without human oversight.
+Scoring Guide:
+- Score 1-2 (Low): Agent only reads data, generates drafts, or surfaces recommendations. Human executes all actions.
+- Score 3-5 (Medium): Agent executes actions within bounded parameters (e.g., send draft email after human approval, auto-triage tickets with human review queue).
+- Score 6-8 (High): Agent executes multi-step workflows autonomously with limited interruption points (e.g., auto-approve low-risk loans, auto-schedule and cancel meetings).
+- Score 9-10 (Critical): Agent makes irreversible decisions at scale with no human checkpoints (e.g., auto-terminate contracts, delete production records, initiate financial transfers).
+Mitigation: Every score ≥6 requires a defined human-in-the-loop (HITL) gate before write actions. Scores ≥8 require executive sign-off and sandbox testing with rollback capability.
+
+2. DATA GOVERNANCE RISK (DGR)
+Definition: The sensitivity and regulatory exposure of the data the agent accesses, processes, or generates.
+Scoring Guide:
+- Score 1-2: Agent operates on anonymized, internal, non-regulated data. No PII, no financial data, no health data.
+- Score 3-5: Agent accesses internal business data with moderate sensitivity (project plans, internal comms, product specs). Some PII possible.
+- Score 6-8: Agent processes regulated data categories: PII under GDPR/CCPA, financial records under SOX, health data under HIPAA.
+- Score 9-10: Agent handles data subject to multiple overlapping regulations, cross-border transfers, or special category data (biometrics, political opinions, criminal records).
+Mitigation: DGR ≥6 requires field-level encryption, access logging, data residency controls, and a Data Protection Impact Assessment (DPIA). All agent outputs must be auditable.
+
+3. COMPLIANCE EXPOSURE RISK (CER)
+Definition: The regulatory and legal risk surface created by deploying the agent, including AI-specific regulations, sector-specific rules, and liability exposure.
+Scoring Guide:
+- Score 1-2: No sector-specific regulation applies. Low liability if agent errors occur. Internal use only.
+- Score 3-5: General AI governance expectations apply (EU AI Act transparency obligations, NIST AI RMF alignment). Moderate reputational risk if the agent fails.
+- Score 6-8: High-risk AI application under EU AI Act Article 6/7 (employment, credit, essential services, law enforcement). Sector regulation applies: SR 11-7 for banking models, NY DFS AI guidance, DORA for financial resilience.
+- Score 9-10: Prohibited or near-prohibited AI use case under EU AI Act Article 5, or direct liability for harm to individuals (medical diagnosis, autonomous vehicle decisions, judicial decisions).
+Mitigation: CER ≥6 requires a Conformity Assessment, registration in the EU AI Act database for high-risk systems, ongoing bias monitoring, and an AI Incident Response Plan.
+
+4. CAPABILITY DEBT RISK (CDR)
+Definition: The organizational and technical gaps that increase the probability of agent failure, including data quality issues, integration fragility, model limitations, and operational readiness.
+Scoring Guide:
+- Score 1-2: Clean, well-structured data pipelines. APIs are stable and documented. Team has prior experience operating ML/AI systems.
+- Score 3-5: Data exists but requires cleaning. Some integration dependencies with moderate change risk. Team is AI-aware but lacks operational runbooks.
+- Score 6-8: Data is siloed, inconsistent, or governed by shadow IT. Integration dependencies are fragile or undocumented. No AI observability tooling in place.
+- Score 9-10: Foundational data infrastructure issues unresolved. No MLOps or LLMOps capability. High change velocity in the target systems. Agent would introduce significant technical debt.
+Mitigation: CDR ≥6 requires a Pre-Deployment Readiness Assessment, data quality SLAs, and a phased rollout plan. Do not proceed to production deployment until CDR is reduced to ≤5.
+
+5. EQUITY AND BIAS RISK (EBR)
+Definition: The risk that the agent produces outcomes that are systematically unfair, discriminatory, or harmful to specific demographic groups.
+Scoring Guide:
+- Score 1-2: Agent does not make decisions affecting individuals. Outputs are informational or internal. No group-differentiated impact.
+- Score 3-5: Agent may surface recommendations that indirectly affect individuals. Some potential for representation bias in training data or retrieval corpus.
+- Score 6-8: Agent makes or heavily influences decisions affecting individuals (hiring, lending, content moderation, benefits eligibility). Disparate impact testing required.
+- Score 9-10: Agent operates in high-stakes, individual-affecting domains with protected characteristic sensitivity: healthcare triage, criminal risk scoring, refugee status determination.
+Mitigation: EBR ≥6 requires pre-deployment bias audits across protected groups, ongoing disparate impact monitoring, explainability tooling, and a clear appeals/redress mechanism for affected individuals.
+
+ARM™ COMPOSITE SCORE CALCULATION
+ARM™ Score = Weighted average of all five dimensions:
+- Autonomy Risk: 25% weight
+- Data Governance Risk: 20% weight
+- Compliance Exposure Risk: 20% weight
+- Capability Debt Risk: 20% weight
+- Equity and Bias Risk: 15% weight
+
+ARM™ RISK TIERS
+- Score 0-3.0: GREEN — Proceed with standard governance practices
+- Score 3.1-5.5: AMBER — Proceed with enhanced controls. HITL required for write actions.
+- Score 5.6-7.5: RED — Phased deployment only. Independent risk review required before launch.
+- Score 7.6-10.0: CRITICAL — Do not deploy without executive sign-off, external audit, and regulatory pre-clearance where applicable.
+
+ARM™ INTEGRATION WITH AVRE™
+The ARM™ score functions as a risk penalty multiplier in the AVRE™ (Agentic Value Realization Engine) framework:
+Net Enterprise Value = Benefit Realization − (Capability Debt × ARM™ Risk Multiplier)
+Where ARM™ Risk Multiplier = 1 + (ARM™ Score / 10)
+A GREEN ARM™ score (2.0) yields a multiplier of 1.2 — modest impact.
+A RED ARM™ score (7.0) yields a multiplier of 1.7 — significantly penalizing projected value.
+A CRITICAL ARM™ score (9.0) yields a multiplier of 1.9 — near-doubling the effective cost of capability gaps.
